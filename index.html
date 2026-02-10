@@ -1,10 +1,271 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Website Online</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe Ultra</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    color:white;
+    overflow:hidden;
+}
+.container{
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(15px);
+    padding:25px;
+    border-radius:20px;
+    text-align:center;
+    width:380px;
+    box-shadow:0 0 40px rgba(0,0,0,0.5);
+    animation:fadeIn 0.8s ease;
+}
+h1{
+    margin:0 0 10px;
+    font-weight:800;
+    letter-spacing:1px;
+}
+.board{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin:20px 0;
+}
+.cell{
+    width:100px;
+    height:100px;
+    background:rgba(255,255,255,0.9);
+    color:#111;
+    font-size:2.8em;
+    font-weight:700;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    cursor:pointer;
+    border-radius:15px;
+    transition:all 0.2s ease;
+    transform:scale(1);
+}
+.cell:hover{
+    transform:scale(1.05);
+}
+.cell.pop{
+    animation:pop 0.2s ease;
+}
+.cell.win{
+    background:#00ffcc;
+    color:black;
+    animation:glow 1s infinite alternate;
+}
+select,button{
+    padding:8px 12px;
+    margin:5px;
+    border:none;
+    border-radius:10px;
+    font-weight:600;
+    cursor:pointer;
+}
+button{
+    background:#00c9ff;
+    color:black;
+    transition:0.2s;
+}
+button:hover{
+    transform:scale(1.05);
+}
+.status{
+    margin-top:10px;
+    font-weight:600;
+    min-height:24px;
+}
+.scoreboard{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.9em;
+    opacity:0.9;
+}
+@keyframes pop{
+    0%{transform:scale(0.7)}
+    100%{transform:scale(1)}
+}
+@keyframes glow{
+    from{box-shadow:0 0 10px #00ffcc}
+    to{box-shadow:0 0 25px #00ffcc}
+}
+@keyframes fadeIn{
+    from{opacity:0;transform:translateY(20px)}
+    to{opacity:1;transform:translateY(0)}
+}
+</style>
 </head>
 <body>
-<h1>?? Website Berhasil Online ??</h1>
-<p>Dibuat otomatis pakai Python</p>
+<div class="container">
+    <h1>Tic Tac Toe</h1>
+    <div>
+        Difficulty:
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+    </div>
+    <div class="scoreboard">
+        <div>Player: <span id="playerScore">0</span></div>
+        <div>Bot: <span id="botScore">0</span></div>
+        <div>Draw: <span id="drawScore">0</span></div>
+    </div>
+    <div class="board" id="board"></div>
+    <button onclick="restartGame()">Restart</button>
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+const boardElement=document.getElementById('board');
+const statusElement=document.getElementById('status');
+const difficultySelect=document.getElementById('difficulty');
+let board=Array(9).fill(null);
+let gameActive=true;
+let scores={player:0,bot:0,draw:0};
+
+function createBoard(){
+    boardElement.innerHTML='';
+    board.forEach((cell,index)=>{
+        const cellElement=document.createElement('div');
+        cellElement.classList.add('cell');
+        if(cell) cellElement.textContent=cell;
+        cellElement.addEventListener('click',()=>playerMove(index));
+        boardElement.appendChild(cellElement);
+    });
+}
+
+function playerMove(index){
+    if(!gameActive||board[index])return;
+    board[index]='X';
+    render();
+    if(handleResult('X'))return;
+    setTimeout(botMove,400);
+}
+
+function botMove(){
+    const difficulty=difficultySelect.value;
+    let move;
+    if(difficulty==='easy') move=randomMove();
+    else if(difficulty==='medium') move=Math.random()<0.5?bestMove():randomMove();
+    else move=bestMove();
+    if(move!==undefined){
+        board[move]='O';
+        render();
+        handleResult('O');
+    }
+}
+
+function randomMove(){
+    const empty=board.map((v,i)=>v?null:i).filter(v=>v!==null);
+    return empty[Math.floor(Math.random()*empty.length)];
+}
+
+function bestMove(){
+    let bestScore=-Infinity;
+    let move;
+    board.forEach((cell,index)=>{
+        if(!cell){
+            board[index]='O';
+            let score=minimax(board,0,false);
+            board[index]=null;
+            if(score>bestScore){bestScore=score;move=index;}
+        }
+    });
+    return move;
+}
+
+function minimax(newBoard,depth,isMax){
+    if(checkWinner('O'))return 10-depth;
+    if(checkWinner('X'))return depth-10;
+    if(newBoard.every(c=>c))return 0;
+    if(isMax){
+        let best=-Infinity;
+        newBoard.forEach((cell,i)=>{
+            if(!cell){
+                newBoard[i]='O';
+                best=Math.max(best,minimax(newBoard,depth+1,false));
+                newBoard[i]=null;
+            }
+        });
+        return best;
+    }else{
+        let best=Infinity;
+        newBoard.forEach((cell,i)=>{
+            if(!cell){
+                newBoard[i]='X';
+                best=Math.min(best,minimax(newBoard,depth+1,true));
+                newBoard[i]=null;
+            }
+        });
+        return best;
+    }
+}
+
+function handleResult(player){
+    const winPattern=getWinPattern(player);
+    if(winPattern){
+        highlightWin(winPattern);
+        gameActive=false;
+        if(player==='X'){scores.player++;statusElement.textContent='You Win! ??';}
+        else{scores.bot++;statusElement.textContent='Bot Wins! ??';}
+        updateScore();
+        return true;
+    }
+    if(board.every(c=>c)){
+        scores.draw++;
+        statusElement.textContent='Draw!';
+        gameActive=false;
+        updateScore();
+        return true;
+    }
+    return false;
+}
+
+function getWinPattern(player){
+    const patterns=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return patterns.find(p=>p.every(i=>board[i]===player));
+}
+
+function highlightWin(pattern){
+    const cells=document.querySelectorAll('.cell');
+    pattern.forEach(i=>cells[i].classList.add('win'));
+}
+
+function render(){
+    createBoard();
+    const cells=document.querySelectorAll('.cell');
+    board.forEach((val,i)=>{
+        if(val){cells[i].textContent=val;cells[i].classList.add('pop');}
+    });
+}
+
+function updateScore(){
+    document.getElementById('playerScore').textContent=scores.player;
+    document.getElementById('botScore').textContent=scores.bot;
+    document.getElementById('drawScore').textContent=scores.draw;
+}
+
+function restartGame(){
+    board=Array(9).fill(null);
+    gameActive=true;
+    statusElement.textContent='';
+    createBoard();
+}
+
+createBoard();
+</script>
 </body>
 </html>
+
